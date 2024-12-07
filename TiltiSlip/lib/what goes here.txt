@@ -1,0 +1,6 @@
+Grab the Assembly-CSharp.dll and UniTask.dll from the game files.
+Not distributing it since it's from the game files.
+THE GAME IS FREE ON STEAM.
+
+
+Also grab the com.mosadie.mocore.dll from https://github.com/mosadie/mocore
