@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
-    <AssemblyName>com.mosadie.tilfislip</AssemblyName>
+    <AssemblyName>com.mosadie.tiltislip</AssemblyName>
     <Product>TiltiSlip</Product>
     <Description>Trigger in-game actions based on Tiltify Donations</Description>
     <Version>0.1.0</Version>

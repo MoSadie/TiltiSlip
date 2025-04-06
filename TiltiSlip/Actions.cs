@@ -9,13 +9,9 @@ namespace TiltiSlip
 {
     public class Actions
     {
-
-        //TODO
-        // - Program each action
-        // - Add recieve order for each action
-
         internal static void recieveOrder(string msg, string user = null)
         {
+            /*
             try
             {
                 if (user != null)
@@ -29,6 +25,11 @@ namespace TiltiSlip
             {
                 Plugin.Log.LogError(e);
             }
+            */
+            Plugin.debugLogInfo($"recieveOrder by {user}: {msg}");
+
+            //The "We're live in 10 mins fix", send it to everyone lol
+            sendOrder(msg, user);
         }
 
         internal static void sendOrder(string msg, string user = null)
@@ -119,7 +120,7 @@ namespace TiltiSlip
         {
             try
             {
-                GemInventoryHud hud = GameObject.Find("FIXME").GetComponent<GemInventoryHud>();
+                GemInventoryHud hud = GameObject.Find("GemInventoryHud").GetComponent<GemInventoryHud>();
 
                 if (hud == null)
                 {

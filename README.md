@@ -2,7 +2,22 @@
 
 Trigger in-game actions based on Tiltify donations.
 
-For now: THIS WAS CODED QUICKLY FOR MY STREAM. This is not ready for a public ready-to-use release. You can absolutely try to set it up but no guarantees it will work. Mainly posting it now so inspiration can happen.
+> [!CAUTION]
+> THIS WAS CODED QUICKLY FOR MY STREAM. This is not ready for a public ready-to-use release.
+> You can absolutely try to set it up but no guarantees it will work.
+
+## Current Actions
+
+The action is chosen based on the last number in the donation amount.
+
+1. ~~Recieve donation message as custom order. Affects plugin user only~~ (Currently Broken)
+2. Send custom order to all crew with donation message
+3. ~~Lock camera on random crew member~~ (Currently Broken)
+4. ~~Lock camera on self~~ (Currently Broken)
+5. Move self to random station on ship
+6. Rename the ship to donation message
+7. Drop all carried gems
+
 
 ## Requirements
 
@@ -22,8 +37,5 @@ WIP
 
 
 
-# TODO
-
-- Tiltify Webhook validation
-- Tiltify Webhook trigger actions
-- Test all actions
+## To Do
+- Fix local order receiving. For some reason it crashed the game.
