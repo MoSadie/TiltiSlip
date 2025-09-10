@@ -1,4 +1,5 @@
-﻿using Subpixel;
+﻿using BepInEx;
+using Subpixel;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -11,31 +12,38 @@ namespace TiltiSlip
     {
         internal static void recieveOrder(string msg, string user = null)
         {
-            /*
             try
             {
-                if (user != null)
+                ThreadingHelper.Instance.StartSyncInvoke(() =>
                 {
-                    msg = $"\"{msg}\" -{user}";
-                }
+                    if (user != null)
+                    {
+                        msg = $"\"{msg}\" -{user}";
+                    }
 
-                OrderVo local = OrderHelpers.CreateLocal(OrderIssuer.Self, OrderType.CustomMessage, msg);
-                Svc.Get<Subpixel.Events.Events>().Dispatch<OrderGivenEvent>(new OrderGivenEvent(local));
+                    OrderVo local = OrderHelpers.CreateLocal(OrderIssuer.Nobody, OrderType.General, msg);
+                    Svc.Get<Subpixel.Events.Events>().Dispatch<OrderGivenEvent>(new OrderGivenEvent(local));
+                });
             } catch (Exception e)
             {
-                Plugin.Log.LogError(e);
+                TiltiSlip.Log.LogError(e);
             }
-            */
-            Plugin.debugLogInfo($"recieveOrder by {user}: {msg}");
+            
+            TiltiSlip.debugLogInfo($"recieveOrder by {user}: {msg}");
 
             //The "We're live in 10 mins fix", send it to everyone lol
-            sendOrder(msg, user);
+            //sendOrder(msg, user);
         }
 
         internal static void sendOrder(string msg, string user = null)
         {
             try
             {
+                if (!GetIsCaptainOrFirstMate())
+                {
+                    TiltiSlip.debugLogError("Not captain or first mate, cannot send order");
+                    return;
+                }
 
                 if (user != null)
                 {
@@ -45,7 +53,38 @@ namespace TiltiSlip
                 RequestCatalog.CaptainIssueOrderAll(OrderType.CustomMessage, msg);
             } catch (Exception e)
             {
-                Plugin.Log.LogError(e);
+                TiltiSlip.Log.LogError(e);
+            }
+        }
+
+        private static bool GetIsCaptainOrFirstMate()
+        {
+            try
+            {
+                MpSvc mpSvc = Svc.Get<MpSvc>();
+
+                if (mpSvc == null)
+                {
+                    TiltiSlip.Log.LogError("An error occurred handling self crew. null MpSvc.");
+                    return false;
+                }
+
+                MpClientController clients = Svc.Get<MpSvc>().Clients;
+
+                if (clients == null || clients.LocalClient == null)
+                {
+                    TiltiSlip.Log.LogError("An error occurred handling self crew. null clients or local client.");
+                    return false;
+                }
+                else
+                {
+                    return clients.LocalClient.Roles.Has(Roles.Captain) || clients.LocalClient.Roles.Has(Roles.FirstMate);
+                }
+            }
+            catch (Exception e)
+            {
+                TiltiSlip.Log.LogError($"An error occurred while checking if the crewmate is the captain or first mate: {e.Message}");
+                return false;
             }
         }
 
@@ -57,24 +96,39 @@ namespace TiltiSlip
 
                 if (mpSvc == null)
                 {
-                    Plugin.debugLogError("mpSvc is null! focusRandomCrew");
+                    TiltiSlip.debugLogError("mpSvc is null! focusRandomCrew");
                     return;
                 }
 
-                ICollection<Crewmate> crew = mpSvc.Crew.AllCrew();
+                List<Crewmate> crew = mpSvc.Crew.CrewmatesOnBoard;
+
+                if (crew == null || crew.Count == 0)
+                {
+                    TiltiSlip.debugLogError("crew is empty! focusRandomCrew");
+                    return;
+                }
+
+                TiltiSlip.debugLogInfo($"There are {crew.Count} crewmates");
 
                 // Get a random Crewmate from the collection
                 System.Random random = new System.Random();
                 int index = random.Next(crew.Count);
 
-                IEnumerator<Crewmate> enumerator = crew.GetEnumerator();
+                TiltiSlip.debugLogInfo($"Random index is {index}");
+
                 
-                for (int i = 0; i < index; i++)
+
+                TiltiSlip.debugLogInfo("Getting current crewmate");
+
+                Crewmate target = crew[index];
+
+                if (target == null)
                 {
-                    enumerator.MoveNext();
+                    TiltiSlip.debugLogError("target is null! focusRandomCrew");
+                    return;
                 }
 
-                Crewmate target = enumerator.Current;
+                TiltiSlip.debugLogInfo($"Target is {target.Client.Player.DisplayName}");
 
                 recieveOrder($"Let's take a look at what {target.Client.Player.DisplayName} is up to...", source);
                 Mainstay<CameraOperator>.Main.Movement.CamFollowCrewmate(target);
@@ -82,7 +136,7 @@ namespace TiltiSlip
             }
             catch (Exception e)
             {
-                Plugin.Log.LogError(e);
+                TiltiSlip.Log.LogError(e);
             }
         }
 
@@ -94,7 +148,7 @@ namespace TiltiSlip
 
                 if (mpSvc == null)
                 {
-                    Plugin.debugLogError("mpSvc is null! focusSelf");
+                    TiltiSlip.debugLogError("mpSvc is null! focusSelf");
                     return;
                 }
 
@@ -102,7 +156,7 @@ namespace TiltiSlip
 
                 if (crewList == null || crewList.Count == 0)
                 {
-                    Plugin.debugLogError("crewList is empty! focusSelf");
+                    TiltiSlip.debugLogError("crewList is empty! focusSelf");
                     return;
                 }
 
@@ -112,7 +166,7 @@ namespace TiltiSlip
                 Mainstay<CameraOperator>.Main.Movement.CamFollowCrewmate(target);
             } catch (Exception e)
             {
-                Plugin.Log.LogError(e);
+                TiltiSlip.Log.LogError(e);
             }
         }
 
@@ -120,19 +174,27 @@ namespace TiltiSlip
         {
             try
             {
-                GemInventoryHud hud = GameObject.Find("GemInventoryHud").GetComponent<GemInventoryHud>();
+                GameObject hud = GameObject.Find("GemInventoryHud");
 
                 if (hud == null)
                 {
-                    Plugin.debugLogError("Gem HUD is null!");
+                    TiltiSlip.debugLogError("Gem HUD is null!");
                     return;
                 }
 
-                hud.DropItems();
+                GemInventoryHud gemHud = hud.GetComponent<GemInventoryHud>();
+
+                if (gemHud == null)
+                {
+                    TiltiSlip.debugLogError("GemInventoryHud is null!");
+                    return;
+                }
+
+                gemHud.DropItems();
                 recieveOrder("Drop it like it's hot!", source);
             } catch (Exception e)
             {
-                Plugin.Log.LogError(e);
+                TiltiSlip.Log.LogError(e);
             }
         }
 
@@ -140,11 +202,43 @@ namespace TiltiSlip
         {
             try
             {
+                if (EditableText.IsTextUsable(name) == false)
+                {
+                    TiltiSlip.debugLogError($"Ship name {name} is not usable!");
+                    recieveOrder("I would have renamed the ship, but the name was invalid!", source);
+                    return;
+                }
+
                 LocalPlayerPrefs.SetShipName(name);
                 recieveOrder($"Can the ship be named {name} instead?", source);
+
+                GameObject panel = GameObject.Find("Canvas/PixelPerfectCanvas/DialogManager/DialogArea/CaptainConsole(Clone)/Captain Console Root/Captain Console Row/Column A/Bottom Row/ShipStatusPanel");
+                //This cursed string is from RUE, full path to the GameObject when at the helm.
+
+                if (panel == null)
+                {
+                    // Check the staging area for if we are not at helm
+                    panel = GameObject.Find("Canvas/PixelPerfectCanvas/DialogManager/StagingArea/CaptainConsole(Clone)/Captain Console Root/Captain Console Row/Column A/Bottom Row/ShipStatusPanel");
+                    //This cursed string is from RUE, full path to the GameObject when not at the helm.
+                    if (panel == null)
+                    {
+                        TiltiSlip.debugLogError("ShipStatusPanel is null!");
+                        return;
+                    }
+                }
+
+                ShipStatsPanel statsPanel = panel.GetComponent<ShipStatsPanel>();
+
+                if (statsPanel == null)
+                {
+                    TiltiSlip.debugLogError("ShipStatsPanel is null!");
+                    return;
+                }
+
+                statsPanel.ShipNameText.SetUpInitialText(name);
             } catch (Exception e)
             {
-                Plugin.Log.LogError(e);
+                TiltiSlip.Log.LogError(e);
             }
         }
 
@@ -163,29 +257,32 @@ namespace TiltiSlip
         {
             try
             {
-                MpSvc mpSvc = Svc.Get<MpSvc>();
-
-                if (mpSvc == null)
+                ThreadingHelper.Instance.StartSyncInvoke(() =>
                 {
-                    Plugin.debugLogError("mpSvc is null! goToRandomStation");
-                    return;
-                }
+                    MpSvc mpSvc = Svc.Get<MpSvc>();
+
+                    if (mpSvc == null)
+                    {
+                        TiltiSlip.debugLogError("mpSvc is null! goToRandomStation");
+                        return;
+                    }
 
 
-                int typeIndex = UnityEngine.Random.RandomRangeInt(0, types.Length);
-                StationType type = types[typeIndex];
+                    int typeIndex = UnityEngine.Random.RandomRangeInt(0, types.Length);
+                    StationType type = types[typeIndex];
 
-                List<Station> stations = Mainstay<StationManager>.Main.GetStationsOfType(type);
+                    List<Station> stations = Mainstay<StationManager>.Main.GetStationsOfType(type);
 
-                int StationIndex = UnityEngine.Random.RandomRangeInt(0, stations.Count);
+                    int StationIndex = UnityEngine.Random.RandomRangeInt(0, stations.Count);
 
-                Station station = stations[StationIndex];
+                    Station station = stations[StationIndex];
 
-                recieveOrder("Look over there!", source);
-                Svc.Get<Subpixel.Events.Events>().Dispatch<StationClick>(new StationClick(station));
+                    recieveOrder("Look over there!", source);
+                    Svc.Get<Subpixel.Events.Events>().Dispatch<StationClick>(new StationClick(station));
+                });
             } catch(Exception e)
             {
-                Plugin.Log.LogError(e);
+                TiltiSlip.Log.LogError(e);
             }
         }
     }
