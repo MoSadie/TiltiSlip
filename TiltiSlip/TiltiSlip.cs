@@ -1,16 +1,13 @@
 ﻿using BepInEx;
 using BepInEx.Configuration;
 using BepInEx.Logging;
-using HarmonyLib;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Subpixel;
 using Subpixel.Events;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-using System.Net.Http;
 using System.Security.Cryptography;
 using UnityEngine;
 using UnityEngine.Events;
@@ -37,14 +34,14 @@ namespace TiltiSlip
         public static void EnableActions()
         {
             ActionsEnabled = true;
-            debugLogInfo("TiltiSlip actions have been enabled.");
+            DebugLogInfo("TiltiSlip actions have been enabled.");
             Actions.recieveOrder("TiltiSlip actions have been enabled.", "TiltiSlip", true);
         }
 
         public static void DisableActions()
         {
             ActionsEnabled = false;
-            debugLogInfo("TiltiSlip actions have been disabled.");
+            DebugLogInfo("TiltiSlip actions have been disabled.");
             Actions.recieveOrder("TiltiSlip actions have been disabled.", "TiltiSlip", true);
         }
 
@@ -72,7 +69,7 @@ namespace TiltiSlip
             Logger.LogInfo($"Plugin {PluginInfo.PLUGIN_GUID} is loaded!");
         }
 
-        internal static void debugLogInfo(string message)
+        internal static void DebugLogInfo(string message)
         {
             if (debugLogs.Value)
             {
@@ -80,7 +77,7 @@ namespace TiltiSlip
             }
         }
 
-        internal static void debugLogWarn(string message)
+        internal static void DebugLogWarn(string message)
         {
             if (debugLogs.Value)
             {
@@ -88,7 +85,7 @@ namespace TiltiSlip
             }
         }
 
-        internal static void debugLogError(string message)
+        internal static void DebugLogError(string message)
         {
             if (debugLogs.Value)
             {
@@ -96,7 +93,7 @@ namespace TiltiSlip
             }
         }
 
-        internal static void debugLogDebug(string message)
+        internal static void DebugLogDebug(string message)
         {
             if (debugLogs.Value)
             {
@@ -109,35 +106,35 @@ namespace TiltiSlip
             if (enableNumPadKeys.Value)
             {
                 // Note for the future, these are ordered so that the input check happens first, then the canUseKeybind check. This is to prevent unnecessary canUseKeybind calls.
-                if (Input.GetKeyDown(KeyCode.Keypad1) && canUseKeybind())
+                if (Input.GetKeyDown(KeyCode.Keypad1) && CanUseKeybind())
                 {
                     Actions.recieveOrder("Example Donation Message", "TiltiSlip");
                 }
-                if (Input.GetKeyDown(KeyCode.Keypad2) && canUseKeybind())
+                if (Input.GetKeyDown(KeyCode.Keypad2) && CanUseKeybind())
                 {
                     Actions.sendOrder("Example Custom Order", "TiltiSlip");
                 }
-                if (Input.GetKeyDown(KeyCode.Keypad3) && canUseKeybind())
+                if (Input.GetKeyDown(KeyCode.Keypad3) && CanUseKeybind())
                 {
                     Actions.focusRandomCrew("TiltiSlip");
                 }
-                if (Input.GetKeyDown(KeyCode.Keypad4) && canUseKeybind())
+                if (Input.GetKeyDown(KeyCode.Keypad4) && CanUseKeybind())
                 {
                     Actions.focusSelf("TiltiSlip");
                 }
-                if (Input.GetKeyDown(KeyCode.Keypad5) && canUseKeybind())
+                if (Input.GetKeyDown(KeyCode.Keypad5) && CanUseKeybind())
                 {
                     Actions.goToRandomStation("TiltiSlip");
                 }
-                if (Input.GetKeyDown(KeyCode.Keypad6) && canUseKeybind())
+                if (Input.GetKeyDown(KeyCode.Keypad6) && CanUseKeybind())
                 {
                     Actions.renameShip("TiltiSlip Ship", "TiltiSlip");
                 }
-                if (Input.GetKeyDown(KeyCode.Keypad7) && canUseKeybind())
+                if (Input.GetKeyDown(KeyCode.Keypad7) && CanUseKeybind())
                 {
                     Actions.dropGems("TiltiSlip");
                 }
-                if (Input.GetKeyDown(KeyCode.Keypad0) && canUseKeybind())
+                if (Input.GetKeyDown(KeyCode.Keypad0) && CanUseKeybind())
                 {
                     if (ActionsEnabled)
                     {
@@ -153,7 +150,7 @@ namespace TiltiSlip
 
         private void OnShipLoaded(ShipLoadedEvent e)
         {
-            debugLogInfo("Ship loaded. Showing dialog");
+            DebugLogInfo("Ship loaded. Showing dialog");
             ThreadingHelper.Instance.StartSyncInvoke(() =>
             {
                 DialogManager.QuickTwoChoice(
@@ -171,12 +168,12 @@ namespace TiltiSlip
             });
         }
 
-        private bool canUseKeybind()
+        private bool CanUseKeybind()
         {
             var localCrewManager = Mainstay<LocalCrewSelectionManager>.Main;
             if (localCrewManager == null)
             {
-                debugLogWarn("Attempted to check keybind, but no local crew selection manager is found! (likely not on a ship!)");
+                DebugLogWarn("Attempted to check keybind, but no local crew selection manager is found! (likely not on a ship!)");
                 return false;
             }
 
@@ -184,13 +181,13 @@ namespace TiltiSlip
             var localCrewmate = Mainstay<LocalCrewSelectionManager>.Main.GetSelectedLocalCrewmate();
             if (localCrewmate == null || localCrewmate.Crewmate == null)
             {
-                debugLogWarn("Attempted to check keybind, but no local crewmate is found!");
+                DebugLogWarn("Attempted to check keybind, but no local crewmate is found!");
                 return false;
             }
 
             if (localCrewmate.Crewmate.CurrentStation != null && localCrewmate.Crewmate.CurrentStation.StationType == StationType.Helm)
             {
-                debugLogWarn("Attempted to check keybind, but local crewmate is on the helm!");
+                DebugLogWarn("Attempted to check keybind, but local crewmate is on the helm!");
                 return false;
             }
 
@@ -200,7 +197,7 @@ namespace TiltiSlip
 
         public HttpListenerResponse HandleRequest(HttpListenerRequest request, HttpListenerResponse response)
         {
-            debugLogInfo("Handling request");
+            DebugLogInfo("Handling request");
             try
             {
 
@@ -215,7 +212,7 @@ namespace TiltiSlip
                     string body = new System.IO.StreamReader(request.InputStream).ReadToEnd();
 
                     // Parse as json
-                    handleDebugMessage(body);
+                    HandleDebugMessage(body);
 
                     status = HttpStatusCode.OK;
                     responseString = "Debug message handled";
@@ -238,7 +235,7 @@ namespace TiltiSlip
                 {
                     status = HttpStatusCode.OK; // This is so the webhook does not keep trying to send the message, which could lead to it being disabled.
                     responseString = "Missing required headers";
-                    debugLogWarn($"Missing required headers: Sign: {hasSignature} Timestamp: {hasTimestamp}");
+                    DebugLogWarn($"Missing required headers: Sign: {hasSignature} Timestamp: {hasTimestamp}");
                 }
                 else
                 {
@@ -250,12 +247,12 @@ namespace TiltiSlip
                     string body = new System.IO.StreamReader(request.InputStream).ReadToEnd();
 
                     // Validate the message
-                    if (isValidMessage(body, webhookKey.Value, timestamp, signature))
+                    if (IsValidMessage(body, webhookKey.Value, timestamp, signature))
                     {
                         status = HttpStatusCode.OK;
                         responseString = "Valid message";
 
-                        handleTiltifyMessage(body);
+                        HandleTiltifyMessage(body);
                     }
                     else
                     {
@@ -285,7 +282,7 @@ namespace TiltiSlip
             }
         }
 
-        private void handleTiltifyMessage(string body)
+        private void HandleTiltifyMessage(string body)
         {
             // Parse the json body
             JObject json = JsonConvert.DeserializeObject<JObject>(body);
@@ -301,7 +298,7 @@ namespace TiltiSlip
 
                 string message = $"{donorName} donated {amount} {currency} with the comment \"{comment}\"";
 
-                debugLogInfo(message);
+                DebugLogInfo(message);
 
                 //switch based on the last character of the amount
 
@@ -346,7 +343,7 @@ namespace TiltiSlip
             }
         }
 
-        private void handleDebugMessage(string body)
+        private void HandleDebugMessage(string body)
         {
             // Parse the json body
             JObject json = JsonConvert.DeserializeObject<JObject>(body);
@@ -382,7 +379,7 @@ namespace TiltiSlip
                     Actions.dropGems(source);
                     break;
                 default:
-                    debugLogWarn($"Unknown action: {action}");
+                    DebugLogWarn($"Unknown action: {action}");
                     break;
             }
         }
@@ -402,7 +399,7 @@ namespace TiltiSlip
             return this;
         }
 
-        public static bool isValidMessage(string body, string secret, string timestamp, string signature)
+        public static bool IsValidMessage(string body, string secret, string timestamp, string signature)
         {
             try
             {
@@ -425,13 +422,13 @@ namespace TiltiSlip
             }
         }
 
-        private static bool testMessageValidation()
+        private static bool TestMessageValidation()
         {
             string signature = "4OSwlhTt0EcrlSQFlqgE18FOtT+EKX4qTJdJeC8oV/o=";
             string timestamp = "2023-04-18T16:49:00.617031Z";
             string body = "{\"data\":{\"amount\":{\"currency\":\"USD\",\"value\":\"82.95\"},\"campaign_id\":\"a4fd5207-bd9f-4712-920a-85f8d92cf4e6\",\"completed_at\":\"2023-04-18T16:48:26.510702Z\",\"created_at\":\"2023-04-18T03:36:36.510717Z\",\"donor_comment\":\"Rerum quo necessitatibus voluptas provident ad molestiae ipsam.\",\"donor_name\":\"Jirachi\",\"fundraising_event_id\":null,\"id\":\"dfa25dcc-2026-4320-a5b7-5da076efeb05\",\"legacy_id\":0,\"poll_id\":null,\"poll_option_id\":null,\"reward_id\":null,\"sustained\":false,\"target_id\":null,\"team_event_id\":null},\"meta\":{\"attempted_at\":\"2023-04-18T16:49:00.617031Z\",\"event_type\":\"public:direct:donation_updated\",\"generated_at\":\"2023-04-18T16:48:59.510758Z\",\"id\":\"d8768e26-1092-4f4c-a829-a2698cd19664\",\"subscription_source_id\":\"00000000-0000-0000-0000-000000000000\",\"subscription_source_type\":\"test\"}}";
             string secret = "13c3b68914487acd1c68d85857ee1cfc308f15510f2d8e71273ee0f8a42d9d00";
-            return isValidMessage(body, secret, timestamp, signature);
+            return IsValidMessage(body, secret, timestamp, signature);
         }
 
         public MoCore.IMoHttpHandler GetHttpHandler()
