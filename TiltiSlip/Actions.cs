@@ -10,8 +10,14 @@ namespace TiltiSlip
 {
     public class Actions
     {
-        internal static void recieveOrder(string msg, string user = null)
+        internal static void recieveOrder(string msg, string user = null, bool overrideActionsEnabled = false)
         {
+            if (!(TiltiSlip.ActionsEnabled || overrideActionsEnabled))
+            {
+                TiltiSlip.Log.LogInfo("Actions are disabled, ignoring recieveOrder");
+                return;
+            }
+
             try
             {
                 ThreadingHelper.Instance.StartSyncInvoke(() =>
@@ -37,6 +43,12 @@ namespace TiltiSlip
 
         internal static void sendOrder(string msg, string user = null)
         {
+            if (!TiltiSlip.ActionsEnabled)
+            {
+                TiltiSlip.Log.LogInfo("Actions are disabled, ignoring sendOrder");
+                return;
+            }
+
             try
             {
                 if (!GetIsCaptainOrFirstMate())
@@ -90,6 +102,12 @@ namespace TiltiSlip
 
         internal static void focusRandomCrew(string source)
         {
+            if (!TiltiSlip.ActionsEnabled)
+            {
+                TiltiSlip.Log.LogInfo("Actions are disabled, ignoring focusRandomCrew");
+                return;
+            }
+
             try
             {
                 MpSvc mpSvc = Svc.Get<MpSvc>();
@@ -142,6 +160,12 @@ namespace TiltiSlip
 
         internal static void focusSelf(string source)
         {
+            if (!TiltiSlip.ActionsEnabled)
+            {
+                TiltiSlip.Log.LogInfo("Actions are disabled, ignoring focusSelf");
+                return;
+            }
+
             try
             {
                 MpSvc mpSvc = Svc.Get<MpSvc>();
@@ -172,6 +196,12 @@ namespace TiltiSlip
 
         internal static void dropGems(string source)
         {
+            if (!TiltiSlip.ActionsEnabled)
+            {
+                TiltiSlip.Log.LogInfo("Actions are disabled, ignoring dropGems");
+                return;
+            }
+
             try
             {
                 GameObject hud = GameObject.Find("GemInventoryHud");
@@ -200,6 +230,12 @@ namespace TiltiSlip
 
         internal static void renameShip(string name, string source)
         {
+            if (!TiltiSlip.ActionsEnabled)
+            {
+                TiltiSlip.Log.LogInfo("Actions are disabled, ignoring renameShip");
+                return;
+            }
+
             try
             {
                 if (EditableText.IsTextUsable(name) == false)
@@ -255,6 +291,12 @@ namespace TiltiSlip
 
         internal static void goToRandomStation(string source)
         {
+            if (!TiltiSlip.ActionsEnabled)
+            {
+                TiltiSlip.Log.LogInfo("Actions are disabled, ignoring goToRandomStation");
+                return;
+            }
+
             try
             {
                 ThreadingHelper.Instance.StartSyncInvoke(() =>
@@ -272,6 +314,12 @@ namespace TiltiSlip
                     StationType type = types[typeIndex];
 
                     List<Station> stations = Mainstay<StationManager>.Main.GetStationsOfType(type);
+
+                    if (stations == null || stations.Count == 0)
+                    {
+                        TiltiSlip.debugLogError($"stations is empty for type {type}! goToRandomStation");
+                        return;
+                    }
 
                     int StationIndex = UnityEngine.Random.RandomRangeInt(0, stations.Count);
 

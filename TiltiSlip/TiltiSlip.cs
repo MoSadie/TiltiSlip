@@ -1,17 +1,19 @@
 ﻿using BepInEx;
 using BepInEx.Configuration;
-using System.Collections.Generic;
-using HarmonyLib;
-using System.Net.Http;
 using BepInEx.Logging;
-using UnityEngine;
+using HarmonyLib;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using Subpixel;
 using Subpixel.Events;
 using System;
-using System.Net;
-using System.Security.Cryptography;
+using System.Collections.Generic;
 using System.Linq;
-using Newtonsoft.Json.Linq;
+using System.Net;
+using System.Net.Http;
+using System.Security.Cryptography;
+using UnityEngine;
+using UnityEngine.Events;
 
 namespace TiltiSlip
 {
@@ -23,10 +25,28 @@ namespace TiltiSlip
 
         private static ConfigEntry<string> webhookKey;
 
+        private static ConfigEntry<bool> enableNumPadKeys;
+
         internal static ManualLogSource Log;
 
         public static readonly string COMPATIBLE_GAME_VERSION = "4.1595"; // Grab from log file for each game update.
         public static readonly string GAME_VERSION_URL = "https://raw.githubusercontent.com/MoSadie/tiltislip/refs/heads/main/versions.json";
+
+        public static bool ActionsEnabled = false;
+
+        public static void EnableActions()
+        {
+            ActionsEnabled = true;
+            debugLogInfo("TiltiSlip actions have been enabled.");
+            Actions.recieveOrder("TiltiSlip actions have been enabled.", "TiltiSlip", true);
+        }
+
+        public static void DisableActions()
+        {
+            ActionsEnabled = false;
+            debugLogInfo("TiltiSlip actions have been disabled.");
+            Actions.recieveOrder("TiltiSlip actions have been disabled.", "TiltiSlip", true);
+        }
 
         private void Awake()
         {
@@ -42,7 +62,11 @@ namespace TiltiSlip
 
             debugLogs = Config.Bind("Debug", "Debug Logs", false);
 
-            //Harmony.CreateAndPatchAll(typeof(Plugin));
+            enableNumPadKeys = Config.Bind("Controls", "Enable Numpad Keys", true, "Enables numpad keys for manually triggering actions. Useful for demoing actions to viewers. Also NumPad 0 can bse used to temporally disable/enable actions if there's too much happening.");
+
+            //Harmony.CreateAndPatchAll(typeof(TiltiSlip));
+
+            Svc.Get<Events>().AddListener<ShipLoadedEvent>(OnShipLoaded);
 
             // Plugin startup logic
             Logger.LogInfo($"Plugin {PluginInfo.PLUGIN_GUID} is loaded!");
@@ -80,6 +104,100 @@ namespace TiltiSlip
             }
         }
 
+        public void Update()
+        {
+            if (enableNumPadKeys.Value)
+            {
+                // Note for the future, these are ordered so that the input check happens first, then the canUseKeybind check. This is to prevent unnecessary canUseKeybind calls.
+                if (Input.GetKeyDown(KeyCode.Keypad1) && canUseKeybind())
+                {
+                    Actions.recieveOrder("Example Donation Message", "TiltiSlip");
+                }
+                if (Input.GetKeyDown(KeyCode.Keypad2) && canUseKeybind())
+                {
+                    Actions.sendOrder("Example Custom Order", "TiltiSlip");
+                }
+                if (Input.GetKeyDown(KeyCode.Keypad3) && canUseKeybind())
+                {
+                    Actions.focusRandomCrew("TiltiSlip");
+                }
+                if (Input.GetKeyDown(KeyCode.Keypad4) && canUseKeybind())
+                {
+                    Actions.focusSelf("TiltiSlip");
+                }
+                if (Input.GetKeyDown(KeyCode.Keypad5) && canUseKeybind())
+                {
+                    Actions.goToRandomStation("TiltiSlip");
+                }
+                if (Input.GetKeyDown(KeyCode.Keypad6) && canUseKeybind())
+                {
+                    Actions.renameShip("TiltiSlip Ship", "TiltiSlip");
+                }
+                if (Input.GetKeyDown(KeyCode.Keypad7) && canUseKeybind())
+                {
+                    Actions.dropGems("TiltiSlip");
+                }
+                if (Input.GetKeyDown(KeyCode.Keypad0) && canUseKeybind())
+                {
+                    if (ActionsEnabled)
+                    {
+                        DisableActions();
+                    }
+                    else
+                    {
+                        EnableActions();
+                    }
+                }
+            }
+        }
+
+        private void OnShipLoaded(ShipLoadedEvent e)
+        {
+            debugLogInfo("Ship loaded. Showing dialog");
+            ThreadingHelper.Instance.StartSyncInvoke(() =>
+            {
+                DialogManager.QuickTwoChoice(
+                    "Thank you for using TiltiSlip! Please ensure you are using this plugin responsibly, as some actions may affect other players. Would you like TiltiSlip enabled for this ship?" + (enableNumPadKeys.Value ? " You can use the NumPad0 button to enable/disable actions at anytime." : ""),
+                    "TiltiSlip",
+                    (UnityAction)(() => { TiltiSlip.EnableActions(); }),
+                    (UnityAction)(() => { TiltiSlip.DisableActions(); }),
+                    true,
+                    TwoChoicePrompt.ButtonColor.Purple,
+                    "ENABLE",
+                    "DISABLE",
+                    "Also if you haven't yet, check out the wiki for setup instructions!",
+                    "Open Wiki",
+                    "https://mosadie.link/tswiki");
+            });
+        }
+
+        private bool canUseKeybind()
+        {
+            var localCrewManager = Mainstay<LocalCrewSelectionManager>.Main;
+            if (localCrewManager == null)
+            {
+                debugLogWarn("Attempted to check keybind, but no local crew selection manager is found! (likely not on a ship!)");
+                return false;
+            }
+
+            // Check if the local crewmate exists, and that we are not on the helm
+            var localCrewmate = Mainstay<LocalCrewSelectionManager>.Main.GetSelectedLocalCrewmate();
+            if (localCrewmate == null || localCrewmate.Crewmate == null)
+            {
+                debugLogWarn("Attempted to check keybind, but no local crewmate is found!");
+                return false;
+            }
+
+            if (localCrewmate.Crewmate.CurrentStation != null && localCrewmate.Crewmate.CurrentStation.StationType == StationType.Helm)
+            {
+                debugLogWarn("Attempted to check keybind, but local crewmate is on the helm!");
+                return false;
+            }
+
+            return true;
+
+        }
+
         public HttpListenerResponse HandleRequest(HttpListenerRequest request, HttpListenerResponse response)
         {
             debugLogInfo("Handling request");
@@ -115,12 +233,6 @@ namespace TiltiSlip
                 // Check for required headers
                 bool hasSignature = request.Headers.AllKeys.Contains("X-Tiltify-Signature");
                 bool hasTimestamp = request.Headers.AllKeys.Contains("X-Tiltify-Timestamp");
-
-                // print all headers
-                foreach (string key in request.Headers.AllKeys)
-                {
-                    debugLogInfo($"{key}: {request.Headers.Get(key)}");
-                }
 
                 if (!hasSignature || !hasTimestamp)
                 {
