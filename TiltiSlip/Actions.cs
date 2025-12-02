@@ -10,8 +10,14 @@ namespace TiltiSlip
 {
     public class Actions
     {
-        internal static void recieveOrder(string msg, string user = null)
+        internal static void recieveOrder(string msg, string user = null, bool overrideActionsEnabled = false)
         {
+            if (!(TiltiSlip.ActionsEnabled || overrideActionsEnabled))
+            {
+                TiltiSlip.Log.LogInfo("Actions are disabled, ignoring recieveOrder");
+                return;
+            }
+
             try
             {
                 ThreadingHelper.Instance.StartSyncInvoke(() =>
@@ -29,7 +35,7 @@ namespace TiltiSlip
                 TiltiSlip.Log.LogError(e);
             }
             
-            TiltiSlip.debugLogInfo($"recieveOrder by {user}: {msg}");
+            TiltiSlip.DebugLogInfo($"recieveOrder by {user}: {msg}");
 
             //The "We're live in 10 mins fix", send it to everyone lol
             //sendOrder(msg, user);
@@ -37,11 +43,17 @@ namespace TiltiSlip
 
         internal static void sendOrder(string msg, string user = null)
         {
+            if (!TiltiSlip.ActionsEnabled)
+            {
+                TiltiSlip.Log.LogInfo("Actions are disabled, ignoring sendOrder");
+                return;
+            }
+
             try
             {
                 if (!GetIsCaptainOrFirstMate())
                 {
-                    TiltiSlip.debugLogError("Not captain or first mate, cannot send order");
+                    TiltiSlip.DebugLogError("Not captain or first mate, cannot send order");
                     return;
                 }
 
@@ -90,13 +102,19 @@ namespace TiltiSlip
 
         internal static void focusRandomCrew(string source)
         {
+            if (!TiltiSlip.ActionsEnabled)
+            {
+                TiltiSlip.Log.LogInfo("Actions are disabled, ignoring focusRandomCrew");
+                return;
+            }
+
             try
             {
                 MpSvc mpSvc = Svc.Get<MpSvc>();
 
                 if (mpSvc == null)
                 {
-                    TiltiSlip.debugLogError("mpSvc is null! focusRandomCrew");
+                    TiltiSlip.DebugLogError("mpSvc is null! focusRandomCrew");
                     return;
                 }
 
@@ -104,31 +122,31 @@ namespace TiltiSlip
 
                 if (crew == null || crew.Count == 0)
                 {
-                    TiltiSlip.debugLogError("crew is empty! focusRandomCrew");
+                    TiltiSlip.DebugLogError("crew is empty! focusRandomCrew");
                     return;
                 }
 
-                TiltiSlip.debugLogInfo($"There are {crew.Count} crewmates");
+                TiltiSlip.DebugLogInfo($"There are {crew.Count} crewmates");
 
                 // Get a random Crewmate from the collection
                 System.Random random = new System.Random();
                 int index = random.Next(crew.Count);
 
-                TiltiSlip.debugLogInfo($"Random index is {index}");
+                TiltiSlip.DebugLogInfo($"Random index is {index}");
 
                 
 
-                TiltiSlip.debugLogInfo("Getting current crewmate");
+                TiltiSlip.DebugLogInfo("Getting current crewmate");
 
                 Crewmate target = crew[index];
 
                 if (target == null)
                 {
-                    TiltiSlip.debugLogError("target is null! focusRandomCrew");
+                    TiltiSlip.DebugLogError("target is null! focusRandomCrew");
                     return;
                 }
 
-                TiltiSlip.debugLogInfo($"Target is {target.Client.Player.DisplayName}");
+                TiltiSlip.DebugLogInfo($"Target is {target.Client.Player.DisplayName}");
 
                 recieveOrder($"Let's take a look at what {target.Client.Player.DisplayName} is up to...", source);
                 Mainstay<CameraOperator>.Main.Movement.CamFollowCrewmate(target);
@@ -142,13 +160,19 @@ namespace TiltiSlip
 
         internal static void focusSelf(string source)
         {
+            if (!TiltiSlip.ActionsEnabled)
+            {
+                TiltiSlip.Log.LogInfo("Actions are disabled, ignoring focusSelf");
+                return;
+            }
+
             try
             {
                 MpSvc mpSvc = Svc.Get<MpSvc>();
 
                 if (mpSvc == null)
                 {
-                    TiltiSlip.debugLogError("mpSvc is null! focusSelf");
+                    TiltiSlip.DebugLogError("mpSvc is null! focusSelf");
                     return;
                 }
 
@@ -156,7 +180,7 @@ namespace TiltiSlip
 
                 if (crewList == null || crewList.Count == 0)
                 {
-                    TiltiSlip.debugLogError("crewList is empty! focusSelf");
+                    TiltiSlip.DebugLogError("crewList is empty! focusSelf");
                     return;
                 }
 
@@ -172,13 +196,19 @@ namespace TiltiSlip
 
         internal static void dropGems(string source)
         {
+            if (!TiltiSlip.ActionsEnabled)
+            {
+                TiltiSlip.Log.LogInfo("Actions are disabled, ignoring dropGems");
+                return;
+            }
+
             try
             {
                 GameObject hud = GameObject.Find("GemInventoryHud");
 
                 if (hud == null)
                 {
-                    TiltiSlip.debugLogError("Gem HUD is null!");
+                    TiltiSlip.DebugLogError("Gem HUD is null!");
                     return;
                 }
 
@@ -186,7 +216,7 @@ namespace TiltiSlip
 
                 if (gemHud == null)
                 {
-                    TiltiSlip.debugLogError("GemInventoryHud is null!");
+                    TiltiSlip.DebugLogError("GemInventoryHud is null!");
                     return;
                 }
 
@@ -200,11 +230,17 @@ namespace TiltiSlip
 
         internal static void renameShip(string name, string source)
         {
+            if (!TiltiSlip.ActionsEnabled)
+            {
+                TiltiSlip.Log.LogInfo("Actions are disabled, ignoring renameShip");
+                return;
+            }
+
             try
             {
                 if (EditableText.IsTextUsable(name) == false)
                 {
-                    TiltiSlip.debugLogError($"Ship name {name} is not usable!");
+                    TiltiSlip.DebugLogError($"Ship name {name} is not usable!");
                     recieveOrder("I would have renamed the ship, but the name was invalid!", source);
                     return;
                 }
@@ -222,7 +258,7 @@ namespace TiltiSlip
                     //This cursed string is from RUE, full path to the GameObject when not at the helm.
                     if (panel == null)
                     {
-                        TiltiSlip.debugLogError("ShipStatusPanel is null!");
+                        TiltiSlip.DebugLogError("ShipStatusPanel is null!");
                         return;
                     }
                 }
@@ -231,7 +267,7 @@ namespace TiltiSlip
 
                 if (statsPanel == null)
                 {
-                    TiltiSlip.debugLogError("ShipStatsPanel is null!");
+                    TiltiSlip.DebugLogError("ShipStatsPanel is null!");
                     return;
                 }
 
@@ -255,6 +291,12 @@ namespace TiltiSlip
 
         internal static void goToRandomStation(string source)
         {
+            if (!TiltiSlip.ActionsEnabled)
+            {
+                TiltiSlip.Log.LogInfo("Actions are disabled, ignoring goToRandomStation");
+                return;
+            }
+
             try
             {
                 ThreadingHelper.Instance.StartSyncInvoke(() =>
@@ -263,7 +305,7 @@ namespace TiltiSlip
 
                     if (mpSvc == null)
                     {
-                        TiltiSlip.debugLogError("mpSvc is null! goToRandomStation");
+                        TiltiSlip.DebugLogError("mpSvc is null! goToRandomStation");
                         return;
                     }
 
@@ -272,6 +314,12 @@ namespace TiltiSlip
                     StationType type = types[typeIndex];
 
                     List<Station> stations = Mainstay<StationManager>.Main.GetStationsOfType(type);
+
+                    if (stations == null || stations.Count == 0)
+                    {
+                        TiltiSlip.DebugLogError($"stations is empty for type {type}! goToRandomStation");
+                        return;
+                    }
 
                     int StationIndex = UnityEngine.Random.RandomRangeInt(0, stations.Count);
 
